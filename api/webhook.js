@@ -35,7 +35,7 @@ export default async function handler(req, res) {
             contents: [
               {
                 parts: [
-                  { text: "Analisis foto makanan ini dan perkirakan jumlah kalorinya dalam bahasa Indonesia." },
+                  { text: "Analisis foto makanan ini dan perkirakan jumlah kalorinya secara ringkas, buatkan semacam table agar mudah untuk mencerna." },
                   { inline_data: { mime_type: "image/jpeg", data: base64Image } }
                 ]
               }
