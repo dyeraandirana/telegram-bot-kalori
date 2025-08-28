@@ -1,14 +1,9 @@
 import os
 import io
 import logging
-import json
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
-from http.server import HTTPServer
-from telegram.ext.callbackcontext import CallbackContext
-from telegram.ext.callbackqueryhandler import CallbackQueryHandler
-from telegram.ext.messagehandler import MessageHandler
 
 # Konfigurasi diambil dari Vercel Environment Variables
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -33,32 +28,19 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         photo_bytes = io.BytesIO(await photo_file.download_as_bytearray())
 
         gemini_prompt = "Sebagai ahli gizi, berikan estimasi kalori dan makronutrien (karbohidrat, protein, lemak) untuk makanan dalam foto ini. Sajikan jawaban dengan jelas dan ringkas."
-        
+
         response = gemini_model.generate_content([gemini_prompt, photo_bytes])
-        
+
         await update.message.reply_text(response.text)
 
     except Exception as e:
         logger.error(f"Terjadi kesalahan: {e}")
         await update.message.reply_text(f"Maaf, terjadi kesalahan saat memproses gambar.")
 
-# Buat bot dan tambahkan handler
+# Vercel akan mencari variabel 'app' di level atas
 app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+# Tambahkan handler ke aplikasi
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
-
-# Definisikan fungsi webhook yang akan dipanggil oleh Vercel
-async def webhook(request):
-    """Menangani webhook dari Telegram."""
-    try:
-        data = await request.json()
-        update = Update.de_json(data, app.bot)
-        await app.process_update(update)
-        return {'statusCode': 200}
-    except Exception as e:
-        logger.error(f"Error processing webhook: {e}")
-        return {'statusCode': 500, 'body': f'Error: {e}'}
-
-# Vercel akan mencari variabel 'app' di level atas
-app.run_webhook = webhook
