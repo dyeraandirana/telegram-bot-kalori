@@ -1,9 +1,14 @@
 import os
 import io
 import logging
+import json
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 import google.generativeai as genai
+from http.server import HTTPServer
+from telegram.ext.callbackcontext import CallbackContext
+from telegram.ext.callbackqueryhandler import CallbackQueryHandler
+from telegram.ext.messagehandler import MessageHandler
 
 # Konfigurasi diambil dari Vercel Environment Variables
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -16,11 +21,9 @@ gemini_model = genai.GenerativeModel('gemini-1.5-flash-latest')
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Fungsi handler untuk perintah /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text('Halo! Kirimkan saya foto makanan, saya akan mencoba mengestimasi kalorinya.')
 
-# Fungsi handler untuk foto
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info("Foto diterima, sedang diproses...")
     await update.message.reply_text('Sedang menganalisis foto, mohon tunggu...')
@@ -39,10 +42,23 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         logger.error(f"Terjadi kesalahan: {e}")
         await update.message.reply_text(f"Maaf, terjadi kesalahan saat memproses gambar.")
 
-# Buat aplikasi di tingkat atas, seperti yang diharapkan Vercel
+# Buat bot dan tambahkan handler
 app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
-
-# Tambahkan handler ke aplikasi
 app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, start))
+
+# Definisikan fungsi webhook yang akan dipanggil oleh Vercel
+async def webhook(request):
+    """Menangani webhook dari Telegram."""
+    try:
+        data = await request.json()
+        update = Update.de_json(data, app.bot)
+        await app.process_update(update)
+        return {'statusCode': 200}
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}")
+        return {'statusCode': 500, 'body': f'Error: {e}'}
+
+# Vercel akan mencari variabel 'app' di level atas
+app.run_webhook = webhook
