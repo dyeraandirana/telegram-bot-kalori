@@ -2,8 +2,12 @@
   "name": "telegram-bot-kalori",
   "version": "1.0.0",
   "type": "module",
+  "main": "api/webhook.js",
+  "scripts": {
+    "start": "node api/webhook.js"
+  },
   "dependencies": {
-    "node-fetch": "^3.3.2",
-    "googleapis": "^133.0.0"
+    "googleapis": "^133.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
