@@ -1,64 +1,77 @@
-import fetch from "node-fetch";
-
+// api/webhook.js
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.BOT_TOKEN}`;
 
 export default async function handler(req, res) {
   try {
-    console.log("📩 Incoming update:", JSON.stringify(req.body, null, 2));
+    if (req.method !== "POST") return res.status(200).send("OK");
 
-    const message = req.body.message;
-    if (!message) {
-      console.log("⚠️ No message in update");
-      return res.status(200).end();
-    }
+    const update = req.body;
+    console.log("📩 Incoming update:", JSON.stringify(update, null, 2));
 
-    const chatId = message.chat.id;
+    const msg = update.message;
+    if (!msg) return res.status(200).send("no message");
 
-    if (message.photo) {
-      console.log("🖼 Ada foto");
-      const fileId = message.photo[message.photo.length - 1].file_id;
+    const chatId = msg.chat.id;
 
-      // Ambil file path
-      const fileResp = await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`);
-      const fileData = await fileResp.json();
-      console.log("📂 File data:", fileData);
-
-      if (!fileData.ok) {
-        console.error("❌ Gagal getFile:", fileData);
-        return res.status(200).end();
-      }
-
-      const filePath = fileData.result.file_path;
-      const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${filePath}`;
-      console.log("🔗 File URL:", fileUrl);
-
-      // Test reply
+    // Balas teks biasa (echo)
+    if (msg.text) {
       const resp = await fetch(`${TELEGRAM_API}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `✅ Foto diterima!\n${fileUrl}`,
-        }),
+        body: JSON.stringify({ chat_id: chatId, text: `Kamu nulis: ${msg.text}` }),
       });
-
-      const result = await resp.json();
-      console.log("📤 Hasil sendMessage:", result);
-    } else {
-      console.log("✉️ Ada text:", message.text);
-      await fetch(`${TELEGRAM_API}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `Kamu bilang: ${message.text}`,
-        }),
-      });
+      console.log("📤 sendMessage(text):", await resp.json());
+      return res.status(200).send("ok");
     }
 
-    return res.status(200).json({ ok: true });
-  } catch (err) {
-    console.error("🔥 ERROR di handler:", err);
-    return res.status(500).json({ error: err.message });
+    // Ambil gambar baik sebagai photo maupun document (screenshot/file)
+    let fileId = null;
+    if (msg.photo?.length) {
+      fileId = msg.photo[msg.photo.length - 1].file_id;
+      console.log("🖼 photo file_id:", fileId);
+    } else if (msg.document?.mime_type?.startsWith("image/")) {
+      fileId = msg.document.file_id;
+      console.log("🖼 document file_id:", fileId);
+    }
+
+    if (!fileId) {
+      const resp = await fetch(`${TELEGRAM_API}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: "Kirim teks atau foto ya 🙏" }),
+      });
+      console.log("📤 sendMessage(no file):", await resp.json());
+      return res.status(200).send("ok");
+    }
+
+    // Dapatkan file_path dari Telegram
+    const fileInfo = await (await fetch(`${TELEGRAM_API}/getFile?file_id=${fileId}`)).json();
+    console.log("📂 getFile:", fileInfo);
+
+    if (!fileInfo.ok) {
+      const resp = await fetch(`${TELEGRAM_API}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: "Gagal ambil file dari Telegram 😕" }),
+      });
+      console.log("📤 sendMessage(getFile fail):", await resp.json());
+      return res.status(200).send("ok");
+    }
+
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${fileInfo.result.file_path}`;
+    console.log("🔗 fileUrl:", fileUrl);
+
+    // Balas link fotonya (tes)
+    const resp = await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: `✅ Foto diterima!\n${fileUrl}` }),
+    });
+    console.log("📤 sendMessage(photo):", await resp.json());
+
+    return res.status(200).send("ok");
+  } catch (e) {
+    console.error("🔥 handler error:", e);
+    return res.status(500).send("error");
   }
 }
