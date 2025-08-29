@@ -78,13 +78,14 @@ export default async function handler(req, res) {
 
   // ✅ Balas ke Telegram dengan tabel rapi
   const replyText = `
-📊 *Hasil Analisis Kalori*
-
-Kalori : *${data.kalori}* kcal
-Karbo  : *${data.karbo}* g
-Protein: *${data.protein}* g
-Lemak  : *${data.lemak}* g
-`;
+        ${data.deskripsi}
+                
+        📊 *Hasil Analisis Kalori*
+        Kalori : *${data.kalori}* kcal
+        Karbo  : *${data.karbo}* g
+        Protein: *${data.protein}* g
+        Lemak  : *${data.lemak}* g
+        `;
 
   await fetch(
     `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
