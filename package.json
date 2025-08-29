@@ -1,8 +1,8 @@
 {
-  "name": "telegram-bot-kalori",
+  "name": "telegram-calorie-bot",
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "googleapis": "^133.0.0"
   }
 }
