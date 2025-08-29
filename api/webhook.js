@@ -27,7 +27,15 @@ export default async function handler(req, res) {
 
   // ✅ Prompt untuk Gemini (minta JSON)
   const prompt = `
-Saya mengunggah foto makanan. Tolong analisis dan jawab hanya dalam JSON valid.
+      Saya mengunggah sebuah foto makanan. Bisakah Anda:
+      
+      1. Estimasi total kalori dari hidangan tersebut.
+      2. Rangkum perkiraan kalori dalam sebuah tabel.
+      3. Kategorikan kandungan makronutrien (karbohidrat, protein, lemak).
+      4. Berikan perhitungan makronutrien tersebut dalam bentuk tabel.
+      
+      Jawab ringkas, tabel rapi.
+      Tolong analisis dan jawab hanya dalam JSON valid.
 
 Format JSON:
 {
